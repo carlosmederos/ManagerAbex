@@ -3,6 +3,7 @@ package com.krlosmederos.managerabex;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -51,6 +52,8 @@ public class MainActivity extends ActionBarActivity {
         txtMensaje = (TextView) findViewById(R.id.txtMensaje);
         
         txtMensaje.setText("INICIANDO APLICACION...");
+        
+        _timer.schedule(new MyTimerTask(), 1000, 5000);
         
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setWebViewClient(new WebViewClient());
@@ -165,6 +168,15 @@ public class MainActivity extends ActionBarActivity {
             startActivity(intent);
             return true;
         }
+    }
+    
+    private class MyTimerTask extends TimerTask {
+    	
+    	@Override
+		public void run() {
+			Toast.makeText(getApplicationContext(), "Probando Timer cada 5 seg", Toast.LENGTH_SHORT).show();
+			
+		}
     }
     
     
