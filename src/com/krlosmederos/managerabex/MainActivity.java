@@ -14,10 +14,14 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 
 import android.support.v7.app.ActionBarActivity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -42,6 +46,35 @@ public class MainActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        webView = (WebView) findViewById(R.id.webView);
+        txtMensaje = (TextView) findViewById(R.id.txtMensaje);
+        
+        txtMensaje.setText("INICIANDO APLICACION...");
+        
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.setWebViewClient(new WebViewClient());
+        
+    }
+    
+    @Override
+    protected void onDestroy() {
+    	super.onDestroy();
+    	
+    	//LogOff(_User);
+    	// _timer.cancel();
+    	
+    }
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // Verificar evento del boton de atras y que hay historial de navegacion
+        if((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
+            webView.goBack();
+            return true;
+        }
+        // En caso contrario le pasamos el evento al padre
+        return super.onKeyDown(keyCode, event);
     }
 
 /*
@@ -86,7 +119,7 @@ public class MainActivity extends ActionBarActivity {
     
     private void GetUserIdFromUrl(String sUrl)
     {
-        if(_User.isEmpty() && sUrl.indexOf("sUser=") > -1)
+        if(_User == "" && sUrl.indexOf("sUser=") > -1)
         {
             _User = sUrl.split("?")[1].toString().split("&")[0].toString().substring(6);
         }
@@ -100,7 +133,7 @@ public class MainActivity extends ActionBarActivity {
     {
     	try
     	{     		
-        	if(!sUserId.isEmpty())
+        	if(sUserId == "")
         	{
         		String url = _UrlCadlog + "/Administracion/Menu?sUser=" + _User + "&LogOff=true&iOpcion=-1";
             	
@@ -120,5 +153,22 @@ public class MainActivity extends ActionBarActivity {
     	
     }
     
+    private class MyWebViewClient extends WebViewClient {
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            if (Uri.parse(url).getHost().equals(_UrlCadlog)) {
+                // Estoy navegando por mi sitio
+                return false;
+            }
+            // No es mi sitio
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(intent);
+            return true;
+        }
+    }
+    
     
 }
+
+
+
