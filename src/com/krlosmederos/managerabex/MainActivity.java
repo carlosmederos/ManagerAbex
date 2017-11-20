@@ -1,14 +1,16 @@
 package com.krlosmederos.managerabex;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
@@ -18,9 +20,9 @@ import android.support.v7.app.ActionBarActivity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
@@ -30,11 +32,13 @@ import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity {
 	
-	private Timer _timer = new Timer(); 
+	private Timer _timer; 
+	private TimerTask timerTask;
+	private Handler handler = new Handler();
 	private static int _intentosConexion = 0;
-	private static String _PingCadlog = "";
+	private static String _PingCadlog = "200.14.49.67";
     private static String _PortCadlog = "";
-    private static String _UrlCadlog = "";
+    private static String _UrlCadlog = "http://intranet.uij.edu.cu/";
     private static String _User = "";
     
     // Controles
@@ -52,11 +56,13 @@ public class MainActivity extends ActionBarActivity {
         txtMensaje = (TextView) findViewById(R.id.txtMensaje);
         
         txtMensaje.setText("INICIANDO APLICACION...");
+        //webView.loadUrl("http://intranet.uij.edu.cu/");
         
-        _timer.schedule(new MyTimerTask(), 1000, 5000);
+        startTimer();
+        
         
         webView.getSettings().setJavaScriptEnabled(true);
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new MyWebViewClient());
         
     }
     
@@ -65,8 +71,7 @@ public class MainActivity extends ActionBarActivity {
     	super.onDestroy();
     	
     	//LogOff(_User);
-    	// _timer.cancel();
-    	
+    	stopTimer();
     }
     
     @Override
@@ -80,28 +85,12 @@ public class MainActivity extends ActionBarActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-/*
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-    */
     private boolean GetCadlogParams()
     {
+    	_UrlCadlog = "http://intranet.uij.edu.cu/";
+		_PingCadlog = "200.14.49.67";//reader.readLine();
+		return true;
+		/*
     	try
     	{
     		//String path = getApplicationInfo().dataDir;
@@ -109,15 +98,16 @@ public class MainActivity extends ActionBarActivity {
     		BufferedReader reader = new BufferedReader(input);
 
     		_UrlCadlog = "http://" + reader.readLine();
-    		_PingCadlog = reader.readLine();
+    		_PingCadlog = "200.14.49.67";//reader.readLine();
     		_PortCadlog = reader.readLine();
     		reader.close();
     		return true;
     	}
     	catch(Exception ex)
     	{
-    		return false;
+    		return true;
     	}
+    	*/
     }
     
     private void GetUserIdFromUrl(String sUrl)
@@ -138,14 +128,20 @@ public class MainActivity extends ActionBarActivity {
     	{     		
         	if(sUserId == "")
         	{
-        		String url = _UrlCadlog + "/Administracion/Menu?sUser=" + _User + "&LogOff=true&iOpcion=-1";
-            	
+        		String cad_url = _UrlCadlog + "/Administracion/Menu?sUser=" + _User + "&LogOff=true&iOpcion=-1";
+        		
+        		URL url = new URL(cad_url);  
+                HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
+                urlc.setConnectTimeout(5000);
+                urlc.connect();
+            	/*
             	HttpParams httpParam = new BasicHttpParams();
             	HttpConnectionParams.setConnectionTimeout(httpParam, 5000);
             	DefaultHttpClient httpClient = new DefaultHttpClient(httpParam);
             	HttpGet httpGet = new HttpGet(url);
             	HttpResponse response = httpClient.execute(httpGet);
             	httpGet.abort();
+            	*/
         	}
     	}
     	catch(Exception e)
@@ -154,6 +150,89 @@ public class MainActivity extends ActionBarActivity {
     	}
     	
     	
+    }
+    
+    private void stopTimer() {
+    	if(_timer != null) {
+    		_timer.cancel();
+    		_timer.purge();
+    	}	
+    }
+    
+    private void startTimer() {
+    	 _timer = new Timer();
+         timerTask = new TimerTask() {
+ 			public void run() {
+ 				// Usar el manipulador para el Toast
+ 				handler.post(new Runnable() {
+ 					public void run() {
+ 						timerTick();
+ 						Toast.makeText(getApplicationContext(), "Probando Timer cada 5 seg", Toast.LENGTH_SHORT).show();		
+ 					}
+ 				});
+ 			}
+ 		};
+ 		
+ 		_timer.schedule(timerTask, 0, 5000);
+    }
+    
+    private void timerTick() {
+    	
+    	//stopTimer();
+    	try {
+    		txtMensaje.setVisibility(View.VISIBLE);
+    		//txtMensaje.setText("CARGANDO CONFIGURACION...");
+    		if(GetCadlogParams()) {
+    			txtMensaje.setText("VERIFICANDO CONEXION...");
+    			if(Pinging(_PingCadlog) > 0) {
+    				//_UrlCadlog = "http://intranet.uij.edu.cu/";
+    				//_UrlCadlog = "http://192.168.0.102:8082";
+    				URL url = new URL(_UrlCadlog);  
+                    HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
+                    urlc.setConnectTimeout(5000);
+                    try {
+                    	stopTimer();
+                    	urlc.connect();
+                    	_intentosConexion = 0;
+                    	//webView.setVisibility(View.VISIBLE);
+                    	webView.loadUrl(_UrlCadlog);
+                    	urlc.disconnect();
+                    }
+                    catch(Exception e) {
+                    	_intentosConexion++;
+                    	//webView.setVisibility(View.INVISIBLE);
+                    	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")...");
+                    	//txtMensaje.setVisibility(View.VISIBLE);
+                    	urlc.disconnect();
+                    	//startTimer();
+                    }
+    			}
+    			else {
+    				_intentosConexion++;
+    				txtMensaje.setText("RECONECTANDO SERVIDOR ("+_intentosConexion+")...");
+                	//txtMensaje.setVisibility(View.VISIBLE);
+                	//startTimer();
+    			}
+    		}
+    		else {
+    			//stopTimer();
+    			//txtMensaje.setVisibility(View.VISIBLE);
+    			txtMensaje.setText("REVISAR ARCHIVO DE CONFIGURACION");
+    		}
+    	}
+    	catch(Exception e) {
+    		//stopTimer();
+    		//txtMensaje.setVisibility(View.VISIBLE);
+    		txtMensaje.setText("ERROR EN CONFIGURACION...");
+    	}
+    }
+    
+    private int Pinging(String sIP) throws IOException, InterruptedException{
+    	Runtime runtime = Runtime.getRuntime();
+        Process proc = runtime.exec("ping -c 1 " + sIP);
+        proc.waitFor();     
+        int exit = proc.exitValue();
+        return exit;
     }
     
     private class MyWebViewClient extends WebViewClient {
@@ -168,18 +247,17 @@ public class MainActivity extends ActionBarActivity {
             startActivity(intent);
             return true;
         }
+        
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            txtMensaje.setText("CARGANDO...");
+            //txtMensaje.setVisibility(View.INVISIBLE);
+            _intentosConexion = 0;
+            GetUserIdFromUrl(url.toString());
+            Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
+        }
     }
-    
-    private class MyTimerTask extends TimerTask {
-    	
-    	@Override
-		public void run() {
-			Toast.makeText(getApplicationContext(), "Probando Timer cada 5 seg", Toast.LENGTH_SHORT).show();
-			
-		}
-    }
-    
-    
 }
 
 
