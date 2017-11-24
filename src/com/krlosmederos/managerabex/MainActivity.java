@@ -43,14 +43,14 @@ public class MainActivity extends ActionBarActivity {
     private static final int WAIT_CONEXION = 5000;
     
     //DEBUG
-    private static final String IP_UIJ = "200.14.49.67";
+    private static final String IP_UIJ = "10.10.3.46";
     private static final String WEB_UIJ = "http://intranet.uij.edu.cu/";
     
 	
 	private Timer _timer; 
 	private TimerTask timerTask;
 	private Handler handler = new Handler();
-	private static int _intentosConexion = 0;
+	private static int _intentosConexion = -1 ;
 	private static String _PingCadlog = IP_UIJ;
     private static String _PortCadlog = "";
     private static String _UrlCadlog = WEB_UIJ;
@@ -72,10 +72,9 @@ public class MainActivity extends ActionBarActivity {
         txtMensaje = (TextView) findViewById(R.id.txtMensaje);
         
         txtMensaje.setText("INICIANDO APLICACION...");
-        //webView.loadUrl("http://intranet.uij.edu.cu/");
         
+        timerTick();
         startTimer();
-        
         
         webView.getSettings().setJavaScriptEnabled(true);
         webView.setWebViewClient(new MyWebViewClient());
@@ -87,23 +86,24 @@ public class MainActivity extends ActionBarActivity {
     	super.onDestroy();
     	
     	//LogOff(_User);
-    	stopTimer();
+    	_timer.cancel();
+    	_timer.purge();
     }
-    /*
+    
     @Override
     protected void onPause() {
-    	super.onPause();
-    	
-    	stopTimer();
+    	super.onPause(); 	
+    	_timer.cancel();
+    	_timer.purge();
+    	_timer = null;
     }
     
     @Override
     protected void onResume() {
-    	super.onResume();
-    	
+    	super.onResume();	
     	startTimer();
     }
-    */
+    
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         // Verificar evento del boton de atras y que hay historial de navegacion
@@ -182,13 +182,6 @@ public class MainActivity extends ActionBarActivity {
     	
     }
     
-    private void stopTimer() {
-    	if(_timer != null) {
-    		_timer.cancel();
-    		_timer.purge();
-    	}	
-    }
-    
     private void startTimer() {
     	 _timer = new Timer();
          timerTask = new TimerTask() {
@@ -207,33 +200,37 @@ public class MainActivity extends ActionBarActivity {
     }
     
     private void timerTick() {
-    	
-    	//stopTimer();
     	try {
-    		txtMensaje.setVisibility(View.VISIBLE);
+    		//txtMensaje.setVisibility(View.VISIBLE);
     		//txtMensaje.setText("CARGANDO CONFIGURACION...");
     		if(GetCadlogParams()) {
-    			txtMensaje.setText("VERIFICANDO CONEXION...");
+    			if( _intentosConexion != 0 ) {
+    				txtMensaje.setText("VERIFICANDO CONEXION...");
+    				txtMensaje.setVisibility(View.VISIBLE);
+    				webView.setVisibility(View.INVISIBLE);
+    			}
     			if(isOnline(getApplicationContext())) {
-    				new AsyncConnectTask().execute();
+    				new PingAsyncTask().execute();
     			}
     			else {
     				_intentosConexion++;
     				txtMensaje.setText("DISPOSITIVO SIN CONEXION...");
-                	//txtMensaje.setVisibility(View.VISIBLE);
-                	//startTimer();
+    				webView.setVisibility(View.INVISIBLE);
+                	txtMensaje.setVisibility(View.VISIBLE);
     			}
     		}
     		else {
-    			//stopTimer();
-    			//txtMensaje.setVisibility(View.VISIBLE);
-    			txtMensaje.setText("REVISAR ARCHIVO DE CONFIGURACION");
+    			_intentosConexion++;
+    			txtMensaje.setVisibility(View.VISIBLE);
+    			txtMensaje.setText("REVISAR ARCHIVO DE CONFIGURACION...");
+    			webView.setVisibility(View.INVISIBLE);
     		}
     	}
     	catch(Exception e) {
-    		//stopTimer();
-    		//txtMensaje.setVisibility(View.VISIBLE);
-    		txtMensaje.setText("ERROR EN CONFIGURACION..."+e.getMessage());
+    		_intentosConexion++;
+    		webView.setVisibility(View.INVISIBLE);
+    		txtMensaje.setVisibility(View.VISIBLE);
+    		txtMensaje.setText("ERROR EN CONFIGURACION...");
     	}
     }
     
@@ -243,17 +240,10 @@ public class MainActivity extends ActionBarActivity {
     	return networkInfo != null && networkInfo.isAvailable() && networkInfo.isConnected();
     }
     
-    private int Pinging(String sIP) throws IOException, InterruptedException{
-    	Runtime runtime = Runtime.getRuntime();
-        Process proc = runtime.exec("ping -c 1 " + sIP);
-        proc.waitFor();     
-        int exit = proc.exitValue();
-        return exit;
-    }
-    
     private class MyWebViewClient extends WebViewClient {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        	/*
             if (Uri.parse(url).getHost().equals(_UrlCadlog)) {
                 // Estoy navegando por mi sitio
                 return false;
@@ -262,20 +252,22 @@ public class MainActivity extends ActionBarActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
             return true;
+            */
+        	return false;
         }
         
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
-            txtMensaje.setText("CARGANDO...");
-            //txtMensaje.setVisibility(View.INVISIBLE);
             _intentosConexion = 0;
+            webView.setVisibility(View.VISIBLE);
+        	txtMensaje.setVisibility(View.INVISIBLE);
             GetUserIdFromUrl(url.toString());
-            Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
         }
     }
     
-    public class AsyncConnectTask extends AsyncTask<Void, Void, Integer> {
+    public class PingAsyncTask extends AsyncTask<Void, Void, Integer> {
 
         @Override
         protected Integer doInBackground(Void... params) {
@@ -288,47 +280,19 @@ public class MainActivity extends ActionBarActivity {
         	}
         	catch(Exception e) {
         		return -1;
-        	}
+        	}	
         }
 
         @Override
         protected void onPostExecute(Integer okPing) {
-
-        //Se recibe el valor boleano del método doInBackground().
-        // Se puede abrir el Dialogo en el Thread principal. 
-            if(okPing == 0){         
-                 _intentosConexion++;
+            if(okPing != 0){  					         
+                _intentosConexion++;
  				txtMensaje.setText("RECONECTANDO SERVIDOR ("+_intentosConexion+")...");
-             	//txtMensaje.setVisibility(View.VISIBLE);
-             	//startTimer();
+ 				webView.setVisibility(View.INVISIBLE);
+             	txtMensaje.setVisibility(View.VISIBLE);
             } 
             else {
-            	//HttpURLConnection urlc = null;
-            	try {
-            		/*
-            		txtMensaje.setText("PING OK...");
-        			URL url = new URL(_UrlCadlog);
-        			urlc = (HttpURLConnection) url.openConnection();
-                    urlc.setConnectTimeout(WAIT_CONEXION);
-                    //stopTimer();
-                	urlc.connect();
-                	_intentosConexion = 0;
-                	//webView.setVisibility(View.VISIBLE);
-                	 * 
-                	 */
-                	webView.loadUrl(_UrlCadlog);
-                	//urlc.disconnect();
-            	}
-            	catch( Exception e ) {
-            		_intentosConexion++;
-                	//webView.setVisibility(View.INVISIBLE);
-                	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")..."+e.getMessage());
-                	//txtMensaje.setVisibility(View.VISIBLE);
-                	//startTimer();
-            	}
-            	finally {
-            		//urlc.disconnect();
-            	}
+            	new SiteAsyncTask().execute();
     		}
         }
 
@@ -339,6 +303,53 @@ public class MainActivity extends ActionBarActivity {
         protected void onProgressUpdate(Void... values) {}
 
     }
+    
+    
+    public class SiteAsyncTask extends AsyncTask<Void, Void, String> {
+
+        @Override
+        protected String doInBackground(Void... params) {
+        	try {
+        		URL url = new URL(_UrlCadlog);
+    			HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
+                urlc.setConnectTimeout(WAIT_CONEXION);
+            	urlc.connect();
+            	//urlc.disconnect();
+            	return urlc.getResponseMessage();
+        	}
+        	catch(Exception e) {
+        		return e.getMessage();
+        	}	
+        	
+        }
+
+        @Override
+        protected void onPostExecute(String okSite) {
+        	if(true){  					         
+            	_intentosConexion++;
+            	webView.setVisibility(View.INVISIBLE);
+            	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")..."+okSite);
+            	txtMensaje.setVisibility(View.VISIBLE);
+            }
+            else {
+                if(_intentosConexion != 0) {  		// En caso que se haya perdido la conexion en algun momento
+                	webView.loadUrl(_UrlCadlog); 	// cargo el sitio
+                    _intentosConexion = 0;
+                    txtMensaje.setVisibility(View.VISIBLE);
+                    txtMensaje.setText("CARGANDO...");
+                }
+    		}
+        }
+
+        @Override
+        protected void onPreExecute() {}
+
+        @Override
+        protected void onProgressUpdate(Void... values) {}
+
+    }
+    
+    
 }
 
 
