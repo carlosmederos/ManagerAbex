@@ -1,6 +1,8 @@
 package com.krlosmederos.managerabex;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -116,28 +118,21 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private boolean GetCadlogParams()
-    {
-    	_UrlCadlog = WEB_UIJ;
-		_PingCadlog = IP_UIJ;//reader.readLine();
-		return true;
-		/*
-    	try
-    	{
-    		//String path = getApplicationInfo().dataDir;
-    		InputStreamReader input = new InputStreamReader(openFileInput("ConfigCadlogManager.txt"));
-    		BufferedReader reader = new BufferedReader(input);
-
-    		_UrlCadlog = "http://" + reader.readLine();
-    		_PingCadlog = "200.14.49.67";//reader.readLine();
+    {		
+    	String path = getApplicationContext().getFilesDir().getAbsolutePath() + "/ConfigCadlogManager.txt";
+		File fileEvents = new File(path);    
+		txtMensaje.setText(path);
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(fileEvents));
+			_UrlCadlog = "http://" + reader.readLine();
+    		_PingCadlog = reader.readLine();
     		_PortCadlog = reader.readLine();
     		reader.close();
-    		return true;
-    	}
-    	catch(Exception ex)
-    	{
-    		return true;
-    	}
-    	*/
+		    return true;
+		}
+		catch (IOException e) {
+		        return false;
+		}
     }
     
     private void GetUserIdFromUrl(String sUrl)
@@ -176,7 +171,6 @@ public class MainActivity extends ActionBarActivity {
     	}
     	catch(Exception e)
     	{
-    		Toast.makeText(getApplicationContext(), "Tiempo de espera de conexion excedido", Toast.LENGTH_SHORT).show();
     	}
     	
     	
@@ -222,7 +216,7 @@ public class MainActivity extends ActionBarActivity {
     		else {
     			_intentosConexion++;
     			txtMensaje.setVisibility(View.VISIBLE);
-    			txtMensaje.setText("REVISAR ARCHIVO DE CONFIGURACION...");
+    			//txtMensaje.setText("REVISAR ARCHIVO DE CONFIGURACION...");
     			webView.setVisibility(View.INVISIBLE);
     		}
     	}
@@ -314,7 +308,7 @@ public class MainActivity extends ActionBarActivity {
     			HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
                 urlc.setConnectTimeout(WAIT_CONEXION);
             	urlc.connect();
-            	//urlc.disconnect();
+            	
             	return (urlc.getResponseCode() == urlc.HTTP_OK);
         	}
         	catch(Exception e) {
