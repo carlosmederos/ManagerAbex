@@ -57,11 +57,8 @@ public class MainActivity extends ActionBarActivity {
     private static String _User = "";
     
     // Controles
-    private Button btnClose;
     private TextView txtMensaje;
     private WebView webView;
-	
-    
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,16 +88,16 @@ public class MainActivity extends ActionBarActivity {
     }
     
     @Override
-    protected void onPause() {
-    	super.onPause(); 	
+    protected void onStop() {
+    	super.onStop(); 	
     	_timer.cancel();
     	_timer.purge();
     	_timer = null;
     }
     
     @Override
-    protected void onResume() {
-    	super.onResume();	
+    protected void onRestart() {
+    	super.onRestart();	
     	startTimer();
     }
     
