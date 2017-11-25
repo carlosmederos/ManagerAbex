@@ -28,6 +28,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.view.KeyEvent;
 import android.view.View;
@@ -51,9 +52,9 @@ public class MainActivity extends ActionBarActivity {
 	private TimerTask timerTask;
 	private Handler handler = new Handler();
 	private static int _intentosConexion = -1 ;
-	private static String _PingCadlog = IP_UIJ;
+	private static String _PingCadlog = "";
     private static String _PortCadlog = "";
-    private static String _UrlCadlog = WEB_UIJ;
+    private static String _UrlCadlog = "";
     private static String _User = "";
     
     // Controles
@@ -116,9 +117,8 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private boolean GetCadlogParams() {		
-    	String path = getApplicationContext().getFilesDir().getAbsolutePath() + "/ConfigCadlogManager.txt";
-		File fileEvents = new File(path);    
-		txtMensaje.setText(path);
+    	String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/ConfigCadlogManager.txt";
+		File fileEvents = new File(path);
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(fileEvents));
 			_UrlCadlog = "http://" + reader.readLine();
@@ -128,7 +128,8 @@ public class MainActivity extends ActionBarActivity {
 		    return true;
 		}
 		catch(IOException e) {
-		        return false;
+			txtMensaje.setText("no " + e.getMessage());
+			return false;
 		}
     }
     
@@ -150,27 +151,17 @@ public class MainActivity extends ActionBarActivity {
                 HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
                 urlc.setConnectTimeout(WAIT_TIMER);
                 urlc.connect();
-            	/*
-            	HttpParams httpParam = new BasicHttpParams();
-            	HttpConnectionParams.setConnectionTimeout(httpParam, 5000);
-            	DefaultHttpClient httpClient = new DefaultHttpClient(httpParam);
-            	HttpGet httpGet = new HttpGet(url);
-            	HttpResponse response = httpClient.execute(httpGet);
-            	httpGet.abort();
-            	*/
         	}
     	}
     	catch(Exception e) {
     	}
-    	
-    	
     }
     
     private void startTimer() {
     	 _timer = new Timer();
          timerTask = new TimerTask() {
  			public void run() {
- 				// Usar el manipulador para el Toast
+ 				// Usar el manipulador para el Toast y para acceder al UI
  				handler.post(new Runnable() {
  					public void run() {
  						timerTick();
@@ -218,7 +209,7 @@ public class MainActivity extends ActionBarActivity {
     	}
     }
     
-    private static boolean isOnline( Context context ) {
+    private static boolean isOnline(Context context) {
     	ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
     	NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
     	return networkInfo != null && networkInfo.isAvailable() && networkInfo.isConnected();
@@ -247,12 +238,15 @@ public class MainActivity extends ActionBarActivity {
             webView.setVisibility(View.VISIBLE);
         	txtMensaje.setVisibility(View.INVISIBLE);
             GetUserIdFromUrl(url.toString());
-            //Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
         }
     }
     
     public class PingAsyncTask extends AsyncTask<Void, Void, Integer> {
-
+    	/*
+    	 * Clase para lanzar un hilo secundario para testear el server
+    	 * y de esa forma no bloquear el hilo principal (UI Thread)
+    	 */
         @Override
         protected Integer doInBackground(Void... params) {
         	try {
@@ -269,6 +263,11 @@ public class MainActivity extends ActionBarActivity {
 
         @Override
         protected void onPostExecute(Integer okPing) {
+        	/*
+        	 * Este metodo se ejecuta en el hilo principal despues de terminado
+        	 * el hilo secundario de la clase por lo que
+        	 * tiene acceso a todos los controles de la UI
+        	 */
             if(okPing != 0){  					         
                 _intentosConexion++;
  				txtMensaje.setText("RECONECTANDO SERVIDOR ("+_intentosConexion+")...");
@@ -290,7 +289,10 @@ public class MainActivity extends ActionBarActivity {
     
     
     public class SiteAsyncTask extends AsyncTask<Void, Void, Boolean> {
-
+    	/*
+    	 * Clase para lanzar un hilo secundario para testear el sitio
+    	 * y de esa forma no bloquear el hilo principal (UI Thread)
+    	 */
         @Override
         protected Boolean doInBackground(Void... params) {
         	try {
