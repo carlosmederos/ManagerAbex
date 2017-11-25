@@ -1,0 +1,3 @@
+http://intranet.uij.edu.cu/
+10.10.3.46
+8080

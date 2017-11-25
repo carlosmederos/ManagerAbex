@@ -1,6 +1,8 @@
 package com.krlosmederos.managerabex;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -31,7 +33,6 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,7 +47,6 @@ public class MainActivity extends ActionBarActivity {
     private static final String IP_UIJ = "10.10.3.46";
     private static final String WEB_UIJ = "http://intranet.uij.edu.cu/";
     
-	
 	private Timer _timer; 
 	private TimerTask timerTask;
 	private Handler handler = new Handler();
@@ -83,16 +83,19 @@ public class MainActivity extends ActionBarActivity {
     	super.onDestroy();
     	
     	//LogOff(_User);
-    	_timer.cancel();
-    	_timer.purge();
+    	if(_timer != null) {
+    		_timer.cancel();
+        	_timer.purge();
+    	}
     }
     
     @Override
     protected void onStop() {
     	super.onStop(); 	
-    	_timer.cancel();
-    	_timer.purge();
-    	_timer = null;
+    	if(_timer != null) {
+    		_timer.cancel();
+        	_timer.purge();
+    	}
     }
     
     @Override
@@ -112,49 +115,35 @@ public class MainActivity extends ActionBarActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    private boolean GetCadlogParams()
-    {
-    	_UrlCadlog = WEB_UIJ;
-		_PingCadlog = IP_UIJ;//reader.readLine();
-		return true;
-		/*
-    	try
-    	{
-    		//String path = getApplicationInfo().dataDir;
-    		InputStreamReader input = new InputStreamReader(openFileInput("ConfigCadlogManager.txt"));
-    		BufferedReader reader = new BufferedReader(input);
-
-    		_UrlCadlog = "http://" + reader.readLine();
-    		_PingCadlog = "200.14.49.67";//reader.readLine();
+    private boolean GetCadlogParams() {		
+    	String path = getApplicationContext().getFilesDir().getAbsolutePath() + "/ConfigCadlogManager.txt";
+		File fileEvents = new File(path);    
+		txtMensaje.setText(path);
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(fileEvents));
+			_UrlCadlog = "http://" + reader.readLine();
+    		_PingCadlog = reader.readLine();
     		_PortCadlog = reader.readLine();
     		reader.close();
-    		return true;
-    	}
-    	catch(Exception ex)
-    	{
-    		return true;
-    	}
-    	*/
+		    return true;
+		}
+		catch(IOException e) {
+		        return false;
+		}
     }
     
-    private void GetUserIdFromUrl(String sUrl)
-    {
-        if(_User == "" && sUrl.indexOf("sUser=") > -1)
-        {
+    private void GetUserIdFromUrl(String sUrl) {
+        if(_User == "" && sUrl.indexOf("sUser=") > -1) {
             _User = sUrl.split("?")[1].toString().split("&")[0].toString().substring(6);
         }
-        else if(sUrl.indexOf("Login") > -1)
-        {
+        else if(sUrl.indexOf("Login") > -1) {
             _User = "";
         }
     }
     
-    private void LogOff(String sUserId)
-    {
-    	try
-    	{     		
-        	if(sUserId == "")
-        	{
+    private void LogOff(String sUserId) {
+    	try {     		
+        	if(sUserId == "") {
         		String cad_url = _UrlCadlog + "/Administracion/Menu?sUser=" + _User + "&LogOff=true&iOpcion=-1";
         		
         		URL url = new URL(cad_url);  
@@ -171,9 +160,7 @@ public class MainActivity extends ActionBarActivity {
             	*/
         	}
     	}
-    	catch(Exception e)
-    	{
-    		Toast.makeText(getApplicationContext(), "Tiempo de espera de conexion excedido", Toast.LENGTH_SHORT).show();
+    	catch(Exception e) {
     	}
     	
     	
@@ -187,7 +174,7 @@ public class MainActivity extends ActionBarActivity {
  				handler.post(new Runnable() {
  					public void run() {
  						timerTick();
- 						Toast.makeText(getApplicationContext(), "Probando Timer cada 5 seg", Toast.LENGTH_SHORT).show();		
+ 						//Toast.makeText(getApplicationContext(), "Probando Timer cada 5 seg", Toast.LENGTH_SHORT).show();		
  					}
  				});
  			}
@@ -302,30 +289,30 @@ public class MainActivity extends ActionBarActivity {
     }
     
     
-    public class SiteAsyncTask extends AsyncTask<Void, Void, String> {
+    public class SiteAsyncTask extends AsyncTask<Void, Void, Boolean> {
 
         @Override
-        protected String doInBackground(Void... params) {
+        protected Boolean doInBackground(Void... params) {
         	try {
         		URL url = new URL(_UrlCadlog);
     			HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
                 urlc.setConnectTimeout(WAIT_CONEXION);
             	urlc.connect();
-            	//urlc.disconnect();
-            	return urlc.getResponseMessage();
+            	
+            	return (urlc.getResponseCode() == urlc.HTTP_OK);
         	}
         	catch(Exception e) {
-        		return e.getMessage();
+        		return false;
         	}	
         	
         }
 
         @Override
-        protected void onPostExecute(String okSite) {
-        	if(true){  					         
+        protected void onPostExecute(Boolean okSite) {
+        	if(!okSite){  					         
             	_intentosConexion++;
             	webView.setVisibility(View.INVISIBLE);
-            	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")..."+okSite);
+            	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")...");
             	txtMensaje.setVisibility(View.VISIBLE);
             }
             else {
