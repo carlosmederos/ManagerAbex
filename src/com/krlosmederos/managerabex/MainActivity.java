@@ -305,30 +305,30 @@ public class MainActivity extends ActionBarActivity {
     }
     
     
-    public class SiteAsyncTask extends AsyncTask<Void, Void, String> {
+    public class SiteAsyncTask extends AsyncTask<Void, Void, Boolean> {
 
         @Override
-        protected String doInBackground(Void... params) {
+        protected Boolean doInBackground(Void... params) {
         	try {
         		URL url = new URL(_UrlCadlog);
     			HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
                 urlc.setConnectTimeout(WAIT_CONEXION);
             	urlc.connect();
             	//urlc.disconnect();
-            	return urlc.getResponseMessage();
+            	return (urlc.getResponseCode() == urlc.HTTP_OK);
         	}
         	catch(Exception e) {
-        		return e.getMessage();
+        		return false;
         	}	
         	
         }
 
         @Override
-        protected void onPostExecute(String okSite) {
-        	if(true){  					         
+        protected void onPostExecute(Boolean okSite) {
+        	if(!okSite){  					         
             	_intentosConexion++;
             	webView.setVisibility(View.INVISIBLE);
-            	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")..."+okSite);
+            	txtMensaje.setText("RECONECTANDO SITIO ("+_intentosConexion+")...");
             	txtMensaje.setVisibility(View.VISIBLE);
             }
             else {
