@@ -4,23 +4,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-
 import android.support.v7.app.ActionBarActivity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -84,19 +73,13 @@ public class MainActivity extends ActionBarActivity {
     	super.onDestroy();
     	
     	//LogOff(_User);
-    	if(_timer != null) {
-    		_timer.cancel();
-        	_timer.purge();
-    	}
+    	stopTimer();
     }
     
     @Override
     protected void onStop() {
     	super.onStop(); 	
-    	if(_timer != null) {
-    		_timer.cancel();
-        	_timer.purge();
-    	}
+    	stopTimer();
     }
     
     @Override
@@ -107,7 +90,7 @@ public class MainActivity extends ActionBarActivity {
     
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // Verificar evento del boton de atras y que hay historial de navegacion
+        // Verificar evento del boton atras y que hay historial de navegacion
         if((keyCode == KeyEvent.KEYCODE_BACK) && webView.canGoBack()) {
             webView.goBack();
             return true;
@@ -116,7 +99,7 @@ public class MainActivity extends ActionBarActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    private boolean GetCadlogParams() {		
+    private boolean GetCadlogParams() {	
     	String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/ConfigCadlogManager.txt";
 		File fileEvents = new File(path);
 		try {
@@ -128,7 +111,6 @@ public class MainActivity extends ActionBarActivity {
 		    return true;
 		}
 		catch(IOException e) {
-			txtMensaje.setText("no " + e.getMessage());
 			return false;
 		}
     }
@@ -157,8 +139,16 @@ public class MainActivity extends ActionBarActivity {
     	}
     }
     
+    private void stopTimer() {
+    	if(_timer != null) {
+    		_timer.cancel();
+        	_timer.purge();
+    	}
+    }
+    
     private void startTimer() {
     	 _timer = new Timer();
+    	 // Lanzar un hilo para el timer
          timerTask = new TimerTask() {
  			public void run() {
  				// Usar el manipulador para el Toast y para acceder al UI
@@ -185,6 +175,7 @@ public class MainActivity extends ActionBarActivity {
     				webView.setVisibility(View.INVISIBLE);
     			}
     			if(isOnline(getApplicationContext())) {
+    				// Lanzar un hilo para hacer ping
     				new PingAsyncTask().execute();
     			}
     			else {
@@ -218,7 +209,7 @@ public class MainActivity extends ActionBarActivity {
     private class MyWebViewClient extends WebViewClient {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        	/*
+        	
             if (Uri.parse(url).getHost().equals(_UrlCadlog)) {
                 // Estoy navegando por mi sitio
                 return false;
@@ -227,8 +218,6 @@ public class MainActivity extends ActionBarActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
             return true;
-            */
-        	return false;
         }
         
         @Override
@@ -275,6 +264,7 @@ public class MainActivity extends ActionBarActivity {
              	txtMensaje.setVisibility(View.VISIBLE);
             } 
             else {
+            	// Lanzar hilo para verificar conexion con el sitio
             	new SiteAsyncTask().execute();
     		}
         }
@@ -318,8 +308,8 @@ public class MainActivity extends ActionBarActivity {
             	txtMensaje.setVisibility(View.VISIBLE);
             }
             else {
-                if(_intentosConexion != 0) {  		// En caso que se haya perdido la conexion en algun momento
-                	webView.loadUrl(_UrlCadlog); 	// cargo el sitio
+                if(_intentosConexion != 0) {  		// En caso que se haya perdido la conexion en
+                	webView.loadUrl(_UrlCadlog); 	// algun momento vuelvo a cargar el sitio
                     _intentosConexion = 0;
                     txtMensaje.setVisibility(View.VISIBLE);
                     txtMensaje.setText("CARGANDO...");
