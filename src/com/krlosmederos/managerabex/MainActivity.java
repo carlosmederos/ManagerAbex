@@ -31,20 +31,19 @@ public class MainActivity extends ActionBarActivity {
 	
 	//CONSTANTES
     private static final int WAIT_TIMER = 5000;
-    private static final int WAIT_CONEXION = 5000;
-    
+    private static final int WAIT_CONEXION = 3000;
     //DEBUG
-    private static final String IP_UIJ = "10.10.3.46";
+    private static final String IP_UIJ = "10.10.3.203";
     private static final String WEB_UIJ = "http://intranet.uij.edu.cu/";
     
 	private Timer _timer; 
 	private TimerTask timerTask;
-	private Handler handler = new Handler();
-	private static int _intentosConexion = -1 ;
-	private static String _PingCadlog = "";
-    private static String _PortCadlog = "";
-    private static String _UrlCadlog = "";
-    private static String _User = "";
+	private Handler handler;
+	private static int _intentosConexion;
+	private static String _PingCadlog;
+    private static String _PortCadlog;
+    private static String _UrlCadlog;
+    private static String _User;
     
     // Controles
     private TextView txtMensaje;
@@ -55,6 +54,10 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
+        // Inicializaciones
+        _intentosConexion = -1;
+        _PingCadlog = _PortCadlog = _UrlCadlog = _User = "";
+        handler = new Handler();
         webView = (WebView) findViewById(R.id.webView);
         txtMensaje = (TextView) findViewById(R.id.txtMensaje);
         
@@ -63,7 +66,7 @@ public class MainActivity extends ActionBarActivity {
         timerTick();
         startTimer();
         
-        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setJavaScriptEnabled(true); 	// Habilitar JavaScipts
         webView.setWebViewClient(new MyWebViewClient());
         
     }
@@ -72,7 +75,7 @@ public class MainActivity extends ActionBarActivity {
     protected void onDestroy() {
     	super.onDestroy();
     	
-    	//LogOff(_User);
+    	LogOff(_User);
     	stopTimer();
     }
     
@@ -116,7 +119,7 @@ public class MainActivity extends ActionBarActivity {
     }
     
     private void GetUserIdFromUrl(String sUrl) {
-        if(_User == "" && sUrl.indexOf("sUser=") > -1) {
+        if(_User.equals("") && sUrl.indexOf("sUser=") > -1) {
             _User = sUrl.split("?")[1].toString().split("&")[0].toString().substring(6);
         }
         else if(sUrl.indexOf("Login") > -1) {
@@ -125,6 +128,10 @@ public class MainActivity extends ActionBarActivity {
     }
     
     private void LogOff(String sUserId) {
+    	/*
+    	 * Asi mismo esta en la aplicacion en C#
+    	 * no entinendo el uso de sUserId
+    	 */
     	try {     		
         	if(sUserId == "") {
         		String cad_url = _UrlCadlog + "/Administracion/Menu?sUser=" + _User + "&LogOff=true&iOpcion=-1";
@@ -160,7 +167,6 @@ public class MainActivity extends ActionBarActivity {
  				});
  			}
  		};
- 		
  		_timer.schedule(timerTask, 0, WAIT_TIMER);
     }
     
@@ -209,7 +215,7 @@ public class MainActivity extends ActionBarActivity {
     private class MyWebViewClient extends WebViewClient {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        	
+        	/*
             if (Uri.parse(url).getHost().equals(_UrlCadlog)) {
                 // Estoy navegando por mi sitio
                 return false;
@@ -217,7 +223,8 @@ public class MainActivity extends ActionBarActivity {
             // Navegacion sitio externo
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
-            return true;
+            */
+            return false;
         }
         
         @Override
@@ -227,7 +234,7 @@ public class MainActivity extends ActionBarActivity {
             webView.setVisibility(View.VISIBLE);
         	txtMensaje.setVisibility(View.INVISIBLE);
             GetUserIdFromUrl(url.toString());
-            Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(), "Sitio cargado completamente", Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -241,7 +248,8 @@ public class MainActivity extends ActionBarActivity {
         	try {
         		Runtime runtime = Runtime.getRuntime();
                 Process proc = runtime.exec("ping -c 1 " + _PingCadlog);
-                proc.waitFor();     
+                proc.waitFor();
+                //proc.wait(WAIT_TIMER);     
                 int exit = proc.exitValue();
                 return exit;
         	}
@@ -308,8 +316,12 @@ public class MainActivity extends ActionBarActivity {
             	txtMensaje.setVisibility(View.VISIBLE);
             }
             else {
-                if(_intentosConexion != 0) {  		// En caso que se haya perdido la conexion en
-                	webView.loadUrl(_UrlCadlog); 	// algun momento vuelvo a cargar el sitio
+                if(_intentosConexion != 0) {  				// En caso que se haya perdido la conexion en algun
+                	String direccion = webView.getUrl();	// momento vuelvo a cargar el sitio que estaba en el webView
+                	if(direccion != null)
+                		webView.loadUrl(direccion); 		// Continuo navegando por donde me quede
+                	else
+                		webView.loadUrl(_UrlCadlog); 		// Cargo el home del sitio 
                     _intentosConexion = 0;
                     txtMensaje.setVisibility(View.VISIBLE);
                     txtMensaje.setText("CARGANDO...");
