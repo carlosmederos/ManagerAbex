@@ -19,6 +19,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.WebView;
@@ -44,6 +45,8 @@ public class MainActivity extends ActionBarActivity {
     private static String _PortCadlog;
     private static String _UrlCadlog;
     private static String _User;
+    
+    private static final String LOG = MainActivity.class.getName();
     
     // Controles
     private TextView txtMensaje;
@@ -114,6 +117,7 @@ public class MainActivity extends ActionBarActivity {
 		    return true;
 		}
 		catch(IOException e) {
+			Log.e(LOG, e.getMessage());
 			return false;
 		}
     }
@@ -143,6 +147,7 @@ public class MainActivity extends ActionBarActivity {
         	}
     	}
     	catch(Exception e) {
+    		Log.e(LOG, e.getMessage());
     	}
     }
     
@@ -181,10 +186,12 @@ public class MainActivity extends ActionBarActivity {
     				webView.setVisibility(View.INVISIBLE);
     			}
     			if(isOnline(getApplicationContext())) {
+    				Log.i(LOG, "Conectado");
     				// Lanzar un hilo para hacer ping
     				new PingAsyncTask().execute();
     			}
     			else {
+    				Log.e(LOG, "No hay conexion");
     				_intentosConexion++;
     				txtMensaje.setText("DISPOSITIVO SIN CONEXION...");
     				webView.setVisibility(View.INVISIBLE);
@@ -192,6 +199,7 @@ public class MainActivity extends ActionBarActivity {
     			}
     		}
     		else {
+    			Log.e(LOG, "Error en archivo de configuracion");
     			_intentosConexion++;
     			txtMensaje.setVisibility(View.VISIBLE);
     			txtMensaje.setText("REVISAR ARCHIVO DE CONFIGURACION...");
@@ -199,6 +207,7 @@ public class MainActivity extends ActionBarActivity {
     		}
     	}
     	catch(Exception e) {
+    		Log.e(LOG, e.getMessage());
     		_intentosConexion++;
     		webView.setVisibility(View.INVISIBLE);
     		txtMensaje.setVisibility(View.VISIBLE);
@@ -254,6 +263,7 @@ public class MainActivity extends ActionBarActivity {
                 return exit;
         	}
         	catch(Exception e) {
+        		Log.e(LOG, e.getMessage());
         		return -1;
         	}	
         }
@@ -272,6 +282,7 @@ public class MainActivity extends ActionBarActivity {
              	txtMensaje.setVisibility(View.VISIBLE);
             } 
             else {
+            	Log.i(LOG, "Ping OK");
             	// Lanzar hilo para verificar conexion con el sitio
             	new SiteAsyncTask().execute();
     		}
@@ -287,6 +298,8 @@ public class MainActivity extends ActionBarActivity {
     
     
     public class SiteAsyncTask extends AsyncTask<Void, Void, Boolean> {
+    	
+    	private String siteIp;
     	/*
     	 * Clase para lanzar un hilo secundario para testear el sitio
     	 * y de esa forma no bloquear el hilo principal (UI Thread)
@@ -294,7 +307,7 @@ public class MainActivity extends ActionBarActivity {
         @Override
         protected Boolean doInBackground(Void... params) {
         	try {
-        		URL url = new URL(_UrlCadlog);
+        		URL url = new URL(siteIp);
     			HttpURLConnection urlc = (HttpURLConnection) url.openConnection();
                 urlc.setConnectTimeout(WAIT_CONEXION);
             	urlc.connect();
@@ -302,6 +315,7 @@ public class MainActivity extends ActionBarActivity {
             	return (urlc.getResponseCode() == urlc.HTTP_OK);
         	}
         	catch(Exception e) {
+        		Log.e(LOG, e.getMessage());
         		return false;
         	}	
         	
@@ -316,6 +330,8 @@ public class MainActivity extends ActionBarActivity {
             	txtMensaje.setVisibility(View.VISIBLE);
             }
             else {
+            	Log.i(LOG, "Respuesta de Sitio OK");
+            	_UrlCadlog = siteIp;
                 if(_intentosConexion != 0) {  				// En caso que se haya perdido la conexion en algun
                 	String direccion = webView.getUrl();	// momento vuelvo a cargar el sitio que estaba en el webView
                 	if(direccion != null)
@@ -330,7 +346,9 @@ public class MainActivity extends ActionBarActivity {
         }
 
         @Override
-        protected void onPreExecute() {}
+        protected void onPreExecute() {
+        	siteIp = "http://192.168.0.102:8082";
+        }
 
         @Override
         protected void onProgressUpdate(Void... values) {}
